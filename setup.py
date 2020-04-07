@@ -8,6 +8,6 @@ setup(
     author='PangeaMT',
     author_email='a.cerda@pangeanic.es',
     license='MIT',
-    packages=['nteu_gateway'],
+    packages=['nteu_gateway', 'nteu_gateway.segmenter', 'nteu_gateway.utils'],
     zip_safe=False
 )
