@@ -212,7 +212,7 @@ class Server (web.Application):
                     batch = []
                     adapter = self._translation_engine_adapter
                     for i, line in enumerate(in_file):
-                        if (i + 1) % self._config["maxSegmentsPerBatch"] == 0:
+                        if (i + 1) % self._max_segments_per_batch == 0:
                             translated += await adapter.translate(
                                  batch,
                                  self._config
