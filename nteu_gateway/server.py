@@ -6,6 +6,7 @@ import sys
 import os
 import asyncio
 from itertools import chain, count, product, groupby
+from sacrebleu import corpus_bleu
 from nteu_gateway.segmenter.pragmatic_segmenter_adapter import PragmaticSegmenterAdapter
 from nteu_gateway.translation_task import TranslationTask
 from nteu_gateway.translation_task_priority_queue import TranslationTaskPriorityQueue
@@ -58,7 +59,8 @@ class Server (web.Application):
             web.post('/translate', server.translate),
             web.get('/ui-init', server.ui_init),
             web.static('/ui', "ui"),
-            web.get('/', server.index)
+            web.get('/', server.index),
+            web.get('/test', server.test)
         ])
 
         # Background
@@ -199,8 +201,33 @@ class Server (web.Application):
     async def ui_init(self, request):
         pass
 
+    async def test(self, request):
+        if "text" in request:
+            # Evaluate sended text
+            return web.json_response({"Sorry": "Not yet implemented"})
+        else:
+            with open("/test_files/src.txt", "r") as in_file:
+                with open("/test_files/tgt.txt", "r") as ref_file:
+                    translated = []
+                    batch = []
+                    adapter = self._translation_engine_adapter
+                    for i, line in enumerate(in_file):
+                        if (i + 1) % self._config["maxSegmentsPerBatch"] == 0:
+                            translated += await adapter.translate(
+                                 batch,
+                                 self._config
+                            )
+                            batch = []
+
+                        batch.append(line)
+                    if batch != []:
+                        translated += await adapter.translate(
+                             batch,
+                             self._config
+                        )
+                    final_score = corpus_bleu(translated, [ref_file]).score
+
+            return web.json_response({"Score": final_score})
+
     def get_config(self):
         return self._config
-
-
-
