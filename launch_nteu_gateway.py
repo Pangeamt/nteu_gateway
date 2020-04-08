@@ -9,7 +9,6 @@ class FakeTranslationEngineAdapter(TranslationEngineAdapterBase):
 
 
 server = Server.run(
-    config_path='./../config.yml',
+    config_path='config.yml',
     translation_engine_adapter=FakeTranslationEngineAdapter()
 )
-
