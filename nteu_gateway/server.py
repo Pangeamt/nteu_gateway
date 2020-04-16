@@ -1,4 +1,5 @@
 from aiohttp import web
+from aiohttp_swagger import setup_swagger
 import logging
 import traceback
 import yaml
@@ -67,6 +68,8 @@ class Server (web.Application):
         server.on_startup.append(server.start_background)
         server.on_cleanup.append(server.stop_background)
 
+        setup_swagger(server)
+
         # Run
         web.run_app(
             server,
@@ -75,6 +78,31 @@ class Server (web.Application):
         )
 
     async def translate(self, request) -> web.Response:
+        """
+        ---
+        description: This end-point allow to translate.
+        tags:
+        - Translation
+        produces:
+        - text/plain
+        parameters:
+        - in: body
+          name: body
+          description: Body of the query.
+          required: true
+          schema:
+            type: object
+            properties:
+              texts:
+                type: array
+                items:
+                  type: string
+        responses:
+            "200":
+                description: successful query. Return translated text
+            "500":
+                description: query failed.
+        """
         tasks = None
         try:
             # Extract data
@@ -202,32 +230,67 @@ class Server (web.Application):
         pass
 
     async def test(self, request):
-        if "text" in request:
-            # Evaluate sended text
-            return web.json_response({"Sorry": "Not yet implemented"})
-        else:
-            with open("/test_files/src.txt", "r") as in_file:
-                with open("/test_files/tgt.txt", "r") as ref_file:
-                    translated = []
-                    batch = []
-                    adapter = self._translation_engine_adapter
-                    for i, line in enumerate(in_file):
-                        if (i + 1) % self._max_segments_per_batch == 0:
+        """
+        ---
+        description: This end-point allows us to evaluate the model
+        tags:
+        - Translation
+        produces:
+        - text/plain
+        parameters:
+        - in: body
+          name: body
+          description: Body of the query.
+          required: false
+          schema:
+            type: object
+            properties:
+              src:
+                type: string
+                example: src_path
+              ref:
+                type: string
+                example: ref_path
+        responses:
+            "200":
+                description: successful query. Return bleu score
+            "500":
+                description: query failed
+        """
+        try:
+            # Extract data
+            data = await request.json()
+            if "src" in data:
+                # Evaluate sended text
+                return web.json_response({"Sorry": "Not yet implemented"})
+            else:
+                with open("/test_files/src.txt", "r") as in_file:
+                    with open("/test_files/tgt.txt", "r") as ref_file:
+                        translated = []
+                        batch = []
+                        adapter = self._translation_engine_adapter
+                        for i, line in enumerate(in_file):
+                            if (i + 1) % self._max_segments_per_batch == 0:
+                                translated += await adapter.translate(
+                                     batch,
+                                     self._config
+                                )
+                                batch = []
+
+                            batch.append(line)
+                        if batch != []:
                             translated += await adapter.translate(
                                  batch,
                                  self._config
                             )
-                            batch = []
+                        final_score = corpus_bleu(translated, [ref_file]).score
+                return web.json_response({"Score": final_score})
 
-                        batch.append(line)
-                    if batch != []:
-                        translated += await adapter.translate(
-                             batch,
-                             self._config
-                        )
-                    final_score = corpus_bleu(translated, [ref_file]).score
-
-            return web.json_response({"Score": final_score})
+        except Exception:
+            tb = traceback.format_exc()
+            tb_str = str(tb)
+            logging.error('Error: %s', tb_str)
+            return web.Response(text=tb_str, status=500)
 
     def get_config(self):
         return self._config

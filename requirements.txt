@@ -10,3 +10,4 @@ PyYAML==5.3.1
 sacrebleu==1.4.6
 typing==3.7.4.1
 yarl==1.4.2
+aiohttp-swagger==1.0.14
